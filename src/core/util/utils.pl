@@ -61,7 +61,8 @@
               chunk/3,
               member_last/3,
               time_to_internal_time/2,
-              datetime_to_internal_datetime/2
+              datetime_to_internal_datetime/2,
+              terminate_difflist/1
           ]).
 
 /** <module> Utils
@@ -873,3 +874,11 @@ time_to_internal_time(time(HH,MM,SS,Offset),time(HN,MN,SN)) :-
     HN is HH + HHOff mod 24,
     MN is MM + MMOff mod 60,
     SN is SS + SSOff mod 60.
+
+terminate_difflist(X) :-
+    var(X),
+    !,
+    X = [].
+terminate_difflist([]).
+terminate_difflist([_|Rest]) :-
+    terminate_difflist(Rest).

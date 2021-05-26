@@ -129,6 +129,31 @@ create_context(Transaction_Object, Context) :-
         bindings : [],
         selected : []
     }.
+create_context(Transaction_Objects, Context) :-
+    maplist([Transaction_Object]>>(transaction_object{} :< Transaction_Object),
+            Transaction_Objects),
+    [First|_] = Transaction_Objects,
+    transaction_object{ descriptor : Descriptor } :< First,
+    !,
+    collection_descriptor_prefixes(Descriptor, Prefixes),
+    collection_descriptor_default_write_graph(Descriptor, Graph_Descriptor),
+
+    % Note: should we be using system_descriptor{} below? or open it?
+    super_user_authority(Super_User),
+    Context = query_context{
+        authorization : Super_User,
+        transaction_objects : Transaction_Objects,
+        default_collection : Descriptor,
+        filter : type_filter{ types : [instance] },
+        prefixes : Prefixes,
+        write_graph : Graph_Descriptor,
+        system : system_descriptor{},
+        update_guard : _Guard,
+        all_witnesses : false,
+        files : [],
+        bindings : [],
+        selected : []
+    }.
 create_context(Descriptor, Context) :-
     open_descriptor(Descriptor, Transaction_Object),
     create_context(Transaction_Object, Context).

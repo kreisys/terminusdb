@@ -462,7 +462,9 @@ open_descriptor(Descriptor, _Commit_Info, Transaction_Object, Map,
                              descriptor : Descriptor,
                              instance_objects : [Instance_Object],
                              schema_objects : [Layer_Ontology_Object, Repository_Ontology_Object],
-                             inference_objects : []
+                             inference_objects : [],
+                             resources: X-X,
+                             direct_use: _
                          }.
 open_descriptor(Descriptor, _Commit_Info, Transaction_Object, Map,
                  [Descriptor=Transaction_Object|Map_4]) :-
@@ -472,11 +474,16 @@ open_descriptor(Descriptor, _Commit_Info, Transaction_Object, Map,
     } :< Descriptor,
     !,
     open_descriptor(Database_Descriptor, _, Database_Transaction_Object, Map, Map_1),
+    _-Database_Resources = (Database_Transaction_Object.resources),
+    Database_Resources = [(repository(Repository_Name, Direct_Use), Child_Resources)|Rest_Database_Resources],
+    setarg(2, (Database_Transaction_Object.resources), Rest_Database_Resources),
+
 
     database_descriptor{
         database_name : Database_Name,
         organization_name : Organization_Name
     } :< Database_Descriptor,
+
 
     Layer_Ontology_Graph = commit_graph{ organization_name: Organization_Name,
                                          database_name: Database_Name,
@@ -503,7 +510,9 @@ open_descriptor(Descriptor, _Commit_Info, Transaction_Object, Map,
                                              descriptor : Descriptor,
                                              instance_objects : [Instance_Object],
                                              schema_objects : [Layer_Ontology_Object, Ref_Ontology_Object],
-                                             inference_objects : []
+                                             inference_objects : [],
+                                             resources: Child_Resources-Child_Resources,
+                                             direct_use: Direct_Use
                                            }.
 open_descriptor(Descriptor, Commit_Info, Transaction_Object, Map,
                  [Descriptor=Transaction_Object|Map_4]) :-
@@ -514,6 +523,10 @@ open_descriptor(Descriptor, Commit_Info, Transaction_Object, Map,
 
     open_descriptor(Repository_Descriptor, _, Repository_Transaction_Object,
                     Map, Map_1),
+
+    _-Repository_Resources = (Repository_Transaction_Object.resources),
+    Repository_Resources = [branch(Branch_Name)|Rest_Repository_Resources],
+    setarg(2, (Repository_Transaction_Object.resources), Rest_Repository_Resources),
 
     [Instance_Object] = Repository_Transaction_Object.instance_objects,
 

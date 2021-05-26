@@ -52,6 +52,7 @@ read_write_obj_to_graph_validation_obj(Read_Write_Obj, Graph_Validation_Obj, Map
                                      write: Layer_Builder },
     Graph_Validation_Obj = graph_validation_obj{ descriptor: Descriptor,
                                                  read: New_Layer,
+                                                 old: Layer,
                                                  changed: Changed },
 
     (   var(Layer_Builder)
@@ -71,6 +72,7 @@ graph_validation_obj_to_read_write_obj(Graph_Validation_Obj, Read_Write_Obj, Map
 graph_validation_obj_to_read_write_obj(Graph_Validation_Obj, Read_Write_Obj, Map, [Graph_Validation_Obj=Read_Write_Obj|Map]) :-
     Graph_Validation_Obj = graph_validation_obj{ descriptor: Descriptor,
                                                  read: Layer,
+                                                 old: _Old,
                                                  changed: _Changed },
     Read_Write_Obj = read_write_obj{ descriptor: Descriptor,
                                      read: Layer,
@@ -85,12 +87,20 @@ transaction_object_to_validation_object(Transaction_Object, Validation_Object, M
                                          descriptor: Descriptor,
                                          instance_objects: Validation_Instance_Objects,
                                          schema_objects: Validation_Schema_Objects,
-                                         inference_objects: Validation_Inference_Objects
+                                         inference_objects: Validation_Inference_Objects,
+                                         direct_use: _
                                      },
     (   Parent = Transaction_Object.get(parent)
     ->  Intermediate_Validation_Object_1 = Intermediate_Validation_Object.put(parent, Parent)
     ;   Intermediate_Validation_Object_1 = Intermediate_Validation_Object
     ),
+    (   Resources = Transaction_Object.get(resources)
+    ->  Intermediate_Validation_Object_2 = Intermediate_Validation_Object_1.put(resources, Resources)
+    ;   Intermediate_Validation_Object_2 = Intermediate_Validation_Object_1
+    ),
+    (   Direct_Use = (Transaction_Object.get(direct_use))
+    ->  (   Intermediate_Validation_Object_2.direct_use = Direct_Use)
+    ;   true),
     mapm([Object,Validation_Object]>>read_write_obj_to_graph_validation_obj(Object, Validation_Object),
          Instance_Objects,
          Validation_Instance_Objects,
@@ -107,8 +117,8 @@ transaction_object_to_validation_object(Transaction_Object, Validation_Object, M
          Map_3,
          New_Map),
     (   Commit_Info = Transaction_Object.get(commit_info)
-    ->  Validation_Object = Intermediate_Validation_Object_1.put(commit_info, Commit_Info)
-    ;   Validation_Object = Intermediate_Validation_Object_1).
+    ->  Validation_Object = Intermediate_Validation_Object_2.put(commit_info, Commit_Info)
+    ;   Validation_Object = Intermediate_Validation_Object_2).
 
 validation_object_to_transaction_object(Validation_Object, Transaction_Object, Map, New_Map) :-
     validation_object{
@@ -124,6 +134,10 @@ validation_object_to_transaction_object(Validation_Object, Transaction_Object, M
     (   Parent = Validation_Object.get(parent)
     ->  Intermediate_Transaction_Object_1 = Intermediate_Transaction_Object.put(parent, Parent)
     ;   Intermediate_Transaction_Object_1 = Intermediate_Transaction_Object
+    ),
+    (   Resources = Validation_Object.get(resources)
+    ->  Intermediate_Transaction_Object_2 = Intermediate_Transaction_Object_1.put(resources, Resources)
+    ;   Intermediate_Transaction_Object_2 = Intermediate_Transaction_Object_1
     ),
     mapm([Validation_Obj,Read_Write_Obj]>>graph_validation_obj_to_read_write_obj(Validation_Obj, Read_Write_Obj),
          Validation_Instance_Objects,
@@ -141,8 +155,8 @@ validation_object_to_transaction_object(Validation_Object, Transaction_Object, M
          Map_3,
          New_Map),
     (   Commit_Info = Validation_Object.get(commit_info)
-    ->  Transaction_Object = Intermediate_Transaction_Object_1.put(commit_info, Commit_Info)
-    ;   Transaction_Object = Intermediate_Transaction_Object_1).
+    ->  Transaction_Object = Intermediate_Transaction_Object_2.put(commit_info, Commit_Info)
+    ;   Transaction_Object = Intermediate_Transaction_Object_2).
 
 commit_validation_object(Validation_Object, []) :-
     validation_object{
@@ -215,13 +229,15 @@ commit_validation_object(Validation_Object, []) :-
 commit_validation_object(Validation_Object, []) :-
     validation_object{
         descriptor: Descriptor,
-        instance_objects: [Instance_Object]
+        instance_objects: [Instance_Object],
+        resources: Resources,
+        direct_use: Direct_Use
     } :< Validation_Object,
     database_descriptor{
         organization_name: Organization_Name,
         database_name: Database_Name
     } = Descriptor,
-    !,
+    %print_message(debug(terminusdb), database_commit(Direct_Use, Resources)),
     % super simple case, we just need to set head
     % That is, we don't need to check the schema
     (   validation_object_changed(Instance_Object)
@@ -230,8 +246,11 @@ commit_validation_object(Validation_Object, []) :-
         % therefore we can just open it
         organization_database_name(Organization_Name, Database_Name, Composite),
         safe_open_named_graph(Store, Composite, Graph),
+        % nb_set_head will fail if the graph has moved on since the transaction opened.
         nb_set_head(Graph, Instance_Object.read)
-    ;   true).
+    ;   true),
+    % if we made it to the end, cut so we do not go into recovery
+    !.
 commit_validation_object(Validation_Object, [Parent_Transaction]) :-
     validation_object{
         descriptor: Descriptor,
@@ -281,6 +300,123 @@ commit_validation_object(Validation_Object, [Parent_Transaction]) :-
 
     ;   true
     ).
+
+commit_database_validation_object(Validation_Object, []) :-
+    validation_object{
+        descriptor: Descriptor,
+        instance_objects: [Instance_Object]
+    } :< Validation_Object,
+    database_descriptor{
+        organization_name: Organization_Name,
+        database_name: Database_Name
+    } = Descriptor,
+    % super simple case, we just need to set head
+    % That is, we don't need to check the schema
+    (   validation_object_changed(Instance_Object)
+    ->  storage(Store),
+        % The label is the same as the same as the database_name
+        % therefore we can just open it
+        organization_database_name(Organization_Name, Database_Name, Composite),
+        safe_open_named_graph(Store, Composite, Graph),
+        % nb_set_head will fail if the graph has moved on since the transaction opened.
+        nb_set_head(Graph, Instance_Object.read)
+    ;   true),
+    % if we made it to the end, cut so we do not go into recovery
+    !.
+commit_database_validation_object(Validation_Object, []) :-
+    % If we're here, it's cause we are in recovery mode
+    % We tried to commit, but nb_set_head failed, indicating another transaction beat us.
+    % However, if not too much changed, we can recover without redoing the whole transaction.
+    validation_object{
+        descriptor: Descriptor,
+        instance_objects: [Instance_Object],
+        resources: Resources,
+        direct_use: false % This will fail if explicitely marked as true, in which case we do not want to attempt this recovery
+    } :< Validation_Object,
+    terminate_difflist(Resources),
+    print_message(debug(terminusdb), database_commit(Resources)),
+
+    % so lets reopen the database, and see what it's like now
+    create_context(Descriptor, New_Context),
+    with_transaction(
+        New_Context,
+        (   
+            maplist({New_Context}/[repository(Repo_Name, _), Layer_Id]>>(
+                        ignore(repository_head(New_Context, Repo_Name, Layer_Id))),
+                    Resources,
+                    New_Repo_Layer_Ids),
+
+            % and compare with the old situation
+            Old_Layer = (Instance_Object.old),
+            maplist({Old_Layer}/[repository(Repo_Name, _), Layer_Id]>>(
+                        ignore(repository_head(Old_Layer, Repo_Name, Layer_Id))),
+                    Resources,
+                    Old_Repo_Layer_Ids),
+
+            New_Repo_Layer_Ids == Old_Repo_Layer_Ids,
+
+            % still here? That means they were equivalent! Snapshot isolation preserved! wooh!
+            % Let's rebuild
+            Updated_Layer = (Instance_Object.read),
+
+            % TODO it's maybe better to apply-diff instead of rebuilding like this
+            maplist({Updated_Layer, New_Context}/[repository(Repo_Name, _)]>>(
+                        repository_head(Updated_Layer, Repo_Name, Layer_Id),
+                        update_repository_head(New_Context, Repo_Name, Layer_Id)
+                    ))),
+        _).
+
+commit_database_validation_object(Validation_Object, []) :-
+    % If we're here, it's cause we are in recovery mode
+    % the initial commit failed, and on further checking, it looks
+    % like repositories changed too. We have a bit more work to do but
+    % may still be able to recover.
+
+    validation_object{
+        descriptor: Descriptor,
+        instance_objects: [Instance_Object],
+        resources: Resources,
+        direct_use: false % This will fail if explicitely marked as true, in which case we do not want to attempt this recovery
+    } :< Validation_Object,
+    terminate_difflist(Resources),
+
+    open_descriptor(Descriptor, Database_Transaction),
+
+    % collect all involved branches
+    maplist([repository(Repository_Name, Branches), Pairs]>>
+            (
+                terminate_difflist(Branches),
+                maplist({Repository_Name}/[Branch,Repository_Name-Branch]>>true,
+                        Branches,
+                        Pairs)
+            ),
+            Resources,
+            PairLists),
+    flatten(PairLists, Pairs),
+
+    mapm(Pairs, Transactions, [Database_Transaction], _,
+         {Descriptor}/[Repository_Name-Branch_Name, Transaction, S0, S1]>>(
+             Repository_Descriptor = repository_descriptor {
+                                         repository_name: Repository_Name,
+                                         database_descriptor: Descriptor
+                                     },
+             Branch_Descriptor = branch_descriptor {
+                                     branch_name: Branch_Name,
+                                     repository_descriptor: Repository_Descriptor
+                                 },
+             open_descriptor(Branch_Descriptor, commit_info{}, Transaction, S0, S1)
+         )),
+
+    create_context(Transactions, New_Context),
+    with_transaction(
+        New_Context,
+        (
+            % We're now in a simultaneous transaction for all involved branches
+            % Time to check if they're still in the same state as before
+            maplist({New_Context}/[repository(Repository_Name, Branches)]>>(
+                        ignore(branch_head(New_Context, 
+        ),
+        _).
 
 commit_commit_validation_object(Commit_Validation_Object, [Parent_Transaction], New_Commit_Id, New_Commit_Uri) :-
     validation_object{
@@ -379,12 +515,14 @@ commit_validation_objects_([Object|Objects]) :-
     commit_validation_objects_(Sorted_Objects).
 
 commit_validation_objects(Unsorted_Objects) :-
-    % NOTE: We need to check to make sure we do not simlutaneously
+    % NOTE: We need to check to make sure we do not simultaneously
     % modify a parent and child of the same transaction object
     % - this could cause commit to fail when we attempt to make the
     % neccessary changes to the parent transaction object required
     % of a commit (adding commit information and repo change info for
     % instance).
+    maplist([Object]>>(get_dict(direct_use, Object, true)),
+            Unsorted_Objects),
     predsort(commit_order,Unsorted_Objects, Sorted_Objects),
     commit_validation_objects_(Sorted_Objects).
 
