@@ -1,0 +1,172 @@
+{
+  "nodes": {
+    "naersk": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_2"
+      },
+      "locked": {
+        "lastModified": 1629707199,
+        "narHash": "sha256-sGxlmfp5eXL5sAMNqHSb04Zq6gPl+JeltIZ226OYN0w=",
+        "owner": "nix-community",
+        "repo": "naersk",
+        "rev": "df71f5e4babda41cd919a8684b72218e2e809fa9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "naersk",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1629829871,
+        "narHash": "sha256-b5NEBLu6NCQzQ959/M6+BND1gYhWC4ol99gHL//e0Ng=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "f28c62759ba771c8f6a26d4ae41214c62d7a6529",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
+      }
+    },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1629829871,
+        "narHash": "sha256-b5NEBLu6NCQzQ959/M6+BND1gYhWC4ol99gHL//e0Ng=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "f28c62759ba771c8f6a26d4ae41214c62d7a6529",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
+      }
+    },
+    "nixpkgs_3": {
+      "locked": {
+        "lastModified": 1629829871,
+        "narHash": "sha256-b5NEBLu6NCQzQ959/M6+BND1gYhWC4ol99gHL//e0Ng=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "f28c62759ba771c8f6a26d4ae41214c62d7a6529",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
+      }
+    },
+    "nixpkgs_4": {
+      "locked": {
+        "lastModified": 1629829871,
+        "narHash": "sha256-b5NEBLu6NCQzQ959/M6+BND1gYhWC4ol99gHL//e0Ng=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "f28c62759ba771c8f6a26d4ae41214c62d7a6529",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
+      }
+    },
+    "root": {
+      "inputs": {
+        "nixpkgs": "nixpkgs",
+        "terminus_store_prolog": "terminus_store_prolog",
+        "tus": "tus",
+        "utils": "utils_3"
+      }
+    },
+    "terminus_store_prolog": {
+      "inputs": {
+        "naersk": "naersk",
+        "nixpkgs": "nixpkgs_3",
+        "utils": "utils"
+      },
+      "locked": {
+        "lastModified": 1629830309,
+        "narHash": "sha256-AGfiD+6MEsVqVYCRp4PlCeh8fUR/jHEuIXrk1btD9FA=",
+        "owner": "kreisys",
+        "repo": "terminus_store_prolog",
+        "rev": "7f829955b2d312570556b575599320942ea37bda",
+        "type": "github"
+      },
+      "original": {
+        "owner": "kreisys",
+        "repo": "terminus_store_prolog",
+        "type": "github"
+      }
+    },
+    "tus": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_4",
+        "utils": "utils_2"
+      },
+      "locked": {
+        "lastModified": 1629828826,
+        "narHash": "sha256-W6LWk6UtRy2Tj4QjcYa0HqhjPmVpn5reGTzB64z5yR4=",
+        "owner": "kreisys",
+        "repo": "tus",
+        "rev": "1bdb14718ee09d98b641604c6adb90ad3c4ab230",
+        "type": "github"
+      },
+      "original": {
+        "owner": "kreisys",
+        "repo": "tus",
+        "type": "github"
+      }
+    },
+    "utils": {
+      "locked": {
+        "lastModified": 1628100524,
+        "narHash": "sha256-vqI3p9fNj0C4ykTwMjryztszLHq9YU7AUkRJ9BK7rpE=",
+        "owner": "kreisys",
+        "repo": "flake-utils",
+        "rev": "7e5e32b9b20e6091adf27d7cdb1e0a0578b6f4f6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "kreisys",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "utils_2": {
+      "locked": {
+        "lastModified": 1628100524,
+        "narHash": "sha256-vqI3p9fNj0C4ykTwMjryztszLHq9YU7AUkRJ9BK7rpE=",
+        "owner": "kreisys",
+        "repo": "flake-utils",
+        "rev": "7e5e32b9b20e6091adf27d7cdb1e0a0578b6f4f6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "kreisys",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "utils_3": {
+      "locked": {
+        "lastModified": 1628100524,
+        "narHash": "sha256-vqI3p9fNj0C4ykTwMjryztszLHq9YU7AUkRJ9BK7rpE=",
+        "owner": "kreisys",
+        "repo": "flake-utils",
+        "rev": "7e5e32b9b20e6091adf27d7cdb1e0a0578b6f4f6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "kreisys",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
